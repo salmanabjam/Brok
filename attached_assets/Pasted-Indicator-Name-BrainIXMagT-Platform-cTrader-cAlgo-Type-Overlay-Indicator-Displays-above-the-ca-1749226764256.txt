@@ -1,0 +1,170 @@
+Indicator Name: BrainIXMagT
+Platform: cTrader (cAlgo)
+Type: Overlay Indicator (Displays above the candlesticks)
+Current Version: 1.0
+Author: [Salman Abjam]
+Website: www.brainixlabs.com
+
+Table of Contents
+Introduction and Purpose of the Indicator
+
+Input Parameters
+
+Internal Variables and Indicators
+
+Main Methods and Calculations
+
+4.1 Initialize
+
+4.2 Calculate
+
+4.3 CalculateQQE
+
+4.4 GetDar
+
+4.5 CheckBuySignal / CheckSellSignal
+
+4.6 IsRangeMarket
+
+4.7 CalculateSignalStrength
+
+4.8 DrawBuySignal / DrawSellSignal
+
+4.9 DrawTrendDots
+
+4.10 UpdateOrderBlocks
+
+4.11 IsBullishOrderBlock / IsBearishOrderBlock
+
+4.12 UpdateFairValueGaps
+
+4.13 IsBullishFVG / IsBearishFVG
+
+4.14 DrawSummaryTable
+
+4.15 GetAdjustedRSIPeriod / GetAdjustedQQE
+
+How to Use and Run the Indicator
+
+Practical Example
+
+Important Notes and Warnings
+
+Full List of Functions and Classes
+
+Frequently Asked Questions (FAQ)
+
+1. Introduction and Purpose of the Indicator
+Description:
+The BrainIXMagT indicator is an all-in-one tool for detecting intelligent buy and sell signals based on the combination of several internal indicators, including RSI, QQE, ADX/DMS, ATR, moving averages (volume and trend), and more.
+
+The main goal of this indicator is to provide a "Summary Table" at the top of the chart with powerful oscillators and filters. This is achieved by the following methods:
+
+Volume filtering
+
+Trend filtering (Moving Average)
+
+Range Market detection based on ATR
+
+Optimized RSI and QQE calculation for different timeframes
+
+Order Blocks and Fair Value Gaps detection
+
+Trend Dots visualization using three exponential moving averages
+
+Signal strength percentage display based on RSI and ADX combination
+
+The indicator includes several key steps:
+
+QQE calculation using ATR-based delta on Smoothed RSI
+
+Buy/sell signal detection using RSI crossovers with SMA and Overbought/Oversold levels
+
+Volume and trend filters
+
+Market status detection (Range or Trend)
+
+Drawing order blocks and FVGs
+
+Displaying summary table in the top corner of the chart
+
+2. Input Parameters
+Parameter Title	Variable Name	Type	Default Value	Description
+Show Summary Table	ShowSummaryTable	bool	true	Show/Hide the summary table on the chart
+Show Time Zones	ShowTimeZones	bool	true	Show Time Zones in the table (not used in this version)
+Signal Display Style	SignalStyle	string	"Simple"	Signal display style (only "Simple" supported in this version)
+Table Position	TablePosition	string	"Top-Right"	Position of the summary table on the chart
+Signal Line Length	SignalLineLength	int	3	Signal line length (not used in plotting)
+Signal Size	SignalSize	string	"Normal"	Signal icon size (only "Normal" supported in this version)
+Buy Signal Opacity	BuySignalOpacity	int	70	Buy signal icon/text opacity (0-90)
+Sell Signal Opacity	SellSignalOpacity	int	70	Sell signal icon/text opacity (0-90)
+QQE Signal Opacity	QQESignalOpacity	int	50	QQE signal opacity (not used in icon plotting)
+Show Trend Dots	ShowTrendDots	bool	true	Show trend dots on the chart
+Trend Dots Opacity	TrendDotsOpacity	int	30	Trend dots opacity (0-90)
+Enable Range Filter	EnableRangeFilter	bool	true	Enable/Disable range market filter
+ATR Period	ATRPeriod	int	14	ATR period for range market detection
+Range Threshold	RangeThreshold	double	0.5	Range threshold for detecting range market
+Disable Signals in Range	DisableSignalsInRange	bool	true	Disable signals in range market conditions
+RSI Period	RSIPeriod	int	14	RSI period
+RSI SMA Period	RSISMAPeriod	int	14	SMA period for smoothing RSI
+RSI Overbought	TriggerHigh	double	70	Overbought level for RSI
+RSI Oversold	TriggerLow	double	30	Oversold level for RSI
+RSI Tolerance	Tolerance	double	2.0	RSI tolerance for crossovers
+RSI Smoothing (SF)	SF	int	5	Exponential smoothing period for RSI (for QQE)
+QQE Fast Factor	QQE	double	4.238	QQE fast factor (ATR-based for RSI)
+DMI Period	DMILength	int	14	DMI period for ADX calculation
+ADX Smoothing	ADXSmoothing	int	14	Smoothing period for ADX (Moving Average on DI)
+ADX Threshold	ADXThreshold	double	25	ADX threshold to measure trend strength
+Weak Threshold	WeakThreshold	double	20	Weak signal strength threshold
+Medium Threshold	MediumThreshold	double	50	Medium signal strength threshold
+Show Order Blocks	ShowOrderBlocks	bool	true	Display order blocks on the chart
+OB Lookback	OBLookback	int	20	Number of candles to look back for order block detection
+OB Threshold	OBThreshold	double	1.0	Threshold for detecting order blocks
+OB Min Strength	OBMinStrength	double	1.2	Minimum strength for order block detection
+Show FVG	ShowFVG	bool	true	Show Fair Value Gaps on the chart
+FVG Lookback	FVGLookback	int	30	Number of candles to look back for FVG detection
+FVG Gap Factor	FVGGapFactor	double	0.5	Gap factor for FVG size detection
+Enable Volume Filter	EnableVolumeFilter	bool	true	Enable/Disable volume filter
+Volume Threshold	VolumeThreshold	double	1.5	Volume threshold for signal confirmation
+Enable Trend Filter	EnableTrendFilter	bool	true	Enable/Disable trend filter
+Trend MA Period	TrendPeriod	int	50	Trend moving average period
+Auto-Adjust Parameters	AutoAdjust	bool	true	Enable/Disable auto-adjustment of parameters for timeframe
+
+3. Internal Variables and Indicators
+Internal cAlgo Indicators:
+_rsi: Relative Strength Index (RSI)
+
+_rsiSma: Simple Moving Average (SMA) on RSI
+
+_rsiMa: Exponential Moving Average (EMA) on RSI (for QQE)
+
+_atr: Average True Range (ATR)
+
+_dms: Directional Movement System (ADX, +DI, -DI)
+
+_volumeSma: Simple Moving Average on Volume (Tick Volumes)
+
+_trendMa: Exponential Moving Average (EMA) on Close Prices
+
+4. Main Methods and Calculations
+4.1 Initialize()
+This method initializes all internal indicators required for calculations.
+
+4.2 Calculate(int index)
+Calculates the key values for the current bar (candlestick).
+
+4.3 CalculateQQE(int index)
+Calculates the QQE values based on ATR and RSI smoothing.
+
+4.4 GetDar(double atrRsi, int index)
+Calculates the Average True Range (ATR) for the RSI.
+
+5. How to Use and Run the Indicator
+To use the BrainIXMagT indicator in cTrader, load the indicator onto your chart and adjust the input parameters as needed. The summary table will display key information about market conditions, and the buy/sell signals will be displayed on the chart according to the calculated parameters.
+
+Conclusion
+The BrainIXMagT is a powerful and customizable indicator that integrates multiple technical analysis tools to provide reliable buy and sell signals. It combines traditional indicators like RSI, QQE, and ADX with advanced features like Order Blocks and Fair Value Gaps to deliver a comprehensive analysis of market conditions.
+
+This document will be compiled into a full HTML file, including both English and Persian versions, with the specified font for Persian text, and will be fully offline-readable.
+
+Let me know if you'd like me to proceed with creating this full HTML file or if you need additional adjustments!

@@ -33,14 +33,62 @@ export const tradingSignals = pgTable("trading_signals", {
 export const indicatorSettings = pgTable("indicator_settings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
+  // Core RSI/QQE Parameters
   rsiPeriod: integer("rsi_period").default(14),
-  qqeSmoothing: integer("qqe_smoothing").default(5),
-  adxThreshold: integer("adx_threshold").default(25),
+  rsiSmaPeriod: integer("rsi_sma_period").default(14),
+  triggerHigh: real("trigger_high").default(70),
+  triggerLow: real("trigger_low").default(30),
+  tolerance: real("tolerance").default(2.0),
+  sf: integer("sf").default(5), // RSI Smoothing
+  qqeFastFactor: real("qqe_fast_factor").default(4.238),
+  
+  // ADX/DMI Parameters
+  dmiLength: integer("dmi_length").default(14),
+  adxSmoothing: integer("adx_smoothing").default(14),
+  adxThreshold: real("adx_threshold").default(25),
+  
+  // Signal Strength Thresholds
+  weakThreshold: real("weak_threshold").default(20),
+  mediumThreshold: real("medium_threshold").default(50),
+  
+  // Range Market Detection
   rangeFilterEnabled: boolean("range_filter_enabled").default(true),
   atrPeriod: integer("atr_period").default(14),
-  signalStyle: text("signal_style").default("dots"),
-  opacity: integer("opacity").default(85),
-  trendDotsEnabled: boolean("trend_dots_enabled").default(true),
+  rangeThreshold: real("range_threshold").default(0.5),
+  disableSignalsInRange: boolean("disable_signals_in_range").default(true),
+  
+  // Order Blocks
+  showOrderBlocks: boolean("show_order_blocks").default(true),
+  obLookback: integer("ob_lookback").default(20),
+  obThreshold: real("ob_threshold").default(1.0),
+  obMinStrength: real("ob_min_strength").default(1.2),
+  
+  // Fair Value Gaps
+  showFvg: boolean("show_fvg").default(true),
+  fvgLookback: integer("fvg_lookback").default(30),
+  fvgGapFactor: real("fvg_gap_factor").default(0.5),
+  
+  // Volume & Trend Filters
+  enableVolumeFilter: boolean("enable_volume_filter").default(true),
+  volumeThreshold: real("volume_threshold").default(1.5),
+  enableTrendFilter: boolean("enable_trend_filter").default(true),
+  trendPeriod: integer("trend_period").default(50),
+  
+  // Display Settings
+  showSummaryTable: boolean("show_summary_table").default(true),
+  showTimeZones: boolean("show_time_zones").default(true),
+  signalStyle: text("signal_style").default("Simple"),
+  tablePosition: text("table_position").default("Top-Right"),
+  signalLineLength: integer("signal_line_length").default(3),
+  signalSize: text("signal_size").default("Normal"),
+  buySignalOpacity: integer("buy_signal_opacity").default(70),
+  sellSignalOpacity: integer("sell_signal_opacity").default(70),
+  qqeSignalOpacity: integer("qqe_signal_opacity").default(50),
+  showTrendDots: boolean("show_trend_dots").default(true),
+  trendDotsOpacity: integer("trend_dots_opacity").default(30),
+  
+  // Auto-Adjustment
+  autoAdjust: boolean("auto_adjust").default(true),
 });
 
 export const performanceMetrics = pgTable("performance_metrics", {
