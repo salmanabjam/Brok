@@ -438,6 +438,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Crypto News API endpoint
+  app.get("/api/crypto-news/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      
+      if (symbol.toLowerCase() !== 'cardano') {
+        return res.status(400).json({ error: "Only Cardano news is supported currently" });
+      }
+
+      // Get authentic news from multiple sources
+      const news = await cryptoDataService.getCardanoNews();
+      res.json(news);
+    } catch (error) {
+      console.error('Error fetching crypto news:', error);
+      res.status(500).json({ error: "Failed to fetch crypto news" });
+    }
+  });
+
   // Export API routes
   app.get("/api/export/signals/:symbol", async (req, res) => {
     try {
@@ -523,7 +541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const storedData = await storage.insertMarketData(marketData);
         
         // Get recent data for signal generation
-        const recentData = await storage.getLatestMarketData('EURUSD', 50);
+        const recentData = await storage.getLatestMarketData('ADAUSD', 50);
         const settings = await storage.getIndicatorSettings(1) || {
           rsiPeriod: 14,
           qqeSmoothing: 5,

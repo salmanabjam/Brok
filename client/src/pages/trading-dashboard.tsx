@@ -6,8 +6,12 @@ import TradingChart from "@/components/TradingChart";
 import IndicatorControls from "@/components/IndicatorControls";
 import SignalHistory from "@/components/SignalHistory";
 import ExportPanel from "@/components/ExportPanel";
+import UICustomizationPanel from "@/components/UICustomizationPanel";
+import EnhancedSignalVisualization from "@/components/EnhancedSignalVisualization";
+import CryptoNewsPanel from "@/components/CryptoNewsPanel";
 import { useMarketData } from "@/hooks/useMarketData";
 import { IndicatorSettings } from "@/types/trading";
+import { useQuery } from "@tanstack/react-query";
 
 export default function TradingDashboard() {
   const {
@@ -17,7 +21,7 @@ export default function TradingDashboard() {
     currentPrice,
     priceChange,
     isConnected
-  } = useMarketData('EURUSD');
+  } = useMarketData('ADAUSD');
 
   const [signalStrength, setSignalStrength] = useState(75);
   const [volume, setVolume] = useState("1.2M");

@@ -23,18 +23,20 @@ export default function UICustomizationPanel({ onSettingsChange }: UICustomizati
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings, isLoading } = useQuery<IndicatorSettings>({
     queryKey: ['/api/indicator-settings/1'],
     enabled: true,
   });
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (newSettings: Partial<IndicatorSettings>) => {
-      return apiRequest('/api/indicator-settings/1', {
+      const response = await fetch('/api/indicator-settings/1', {
         method: 'PATCH',
         body: JSON.stringify(newSettings),
         headers: { 'Content-Type': 'application/json' }
       });
+      if (!response.ok) throw new Error('Failed to update settings');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/indicator-settings/1'] });
