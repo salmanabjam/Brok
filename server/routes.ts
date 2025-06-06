@@ -84,21 +84,62 @@ function generateTradingSignal(marketData: any[], settings: any) {
   const closes = marketData.map(d => d.close);
   const highs = marketData.map(d => d.high);
   const lows = marketData.map(d => d.low);
+  const volumes = marketData.map(d => d.volume);
 
-  const rsi = calculateRSI(closes, settings.rsiPeriod);
-  const qqe = calculateQQE(rsi, settings.qqeSmoothing);
-  const adx = calculateADX(highs, lows, closes, 14);
+  // Enhanced BrainIXMagT calculations
+  const rsi = calculateRSI(closes, settings.rsiPeriod || 14);
+  const smoothedRSI = calculateSmoothedRSI(closes, settings.rsiPeriod || 14, settings.sf || 5);
+  const atrValues = calculateATRArray(highs, lows, closes, settings.atrPeriod || 14);
+  const qqe = calculateAdvancedQQE(closes, atrValues, settings.qqeFastFactor || 4.238, settings.sf || 5);
+  const adx = calculateADX(highs, lows, closes, settings.dmiLength || 14);
+  const atr = atrValues[atrValues.length - 1] || 0;
+
+  // Range market detection
+  const isRangeMarket = detectRangeMarket(closes, settings.atrPeriod || 14, settings.rangeThreshold || 0.5);
+  
+  // Order blocks and Fair Value Gaps
+  const orderBlocks = findOrderBlocks(highs, lows, volumes, settings.obLookback || 20);
+  const fairValueGaps = findFairValueGaps(highs, lows, 0.0010);
 
   let signalType: string | null = null;
   let strength = 0;
 
-  // Signal generation logic based on BrainIXMagT documentation
-  if (rsi < 30 && qqe < 30 && adx > settings.adxThreshold) {
-    signalType = "BUY";
-    strength = Math.min(95, 60 + (30 - rsi) + (settings.adxThreshold - adx) / 2);
-  } else if (rsi > 70 && qqe > 70 && adx > settings.adxThreshold) {
-    signalType = "SELL";
-    strength = Math.min(95, 60 + (rsi - 70) + (settings.adxThreshold - adx) / 2);
+  // Enhanced signal generation based on BrainIXMagT documentation
+  if (!isRangeMarket || !settings.disableSignalsInRange) {
+    // Volume filter
+    const volumeOk = !settings.enableVolumeFilter || 
+      (volumes.length > 0 && volumes[volumes.length - 1] > 
+       (volumes.slice(-10).reduce((a, b) => a + b, 0) / 10) * (settings.volumeThreshold || 1.5));
+    
+    // Trend filter (simplified for now)
+    const trendOk = !settings.enableTrendFilter || true;
+    
+    if (volumeOk && trendOk) {
+      // Buy signal conditions with tolerance
+      if (rsi < (settings.triggerLow || 30) + (settings.tolerance || 2) && 
+          smoothedRSI < (settings.triggerLow || 30) && 
+          qqe < (settings.triggerLow || 30) && 
+          adx > (settings.adxThreshold || 25)) {
+        signalType = "BUY";
+        strength = Math.min(95, 60 + ((settings.triggerLow || 30) - rsi) * 2 + (adx - (settings.adxThreshold || 25)));
+        
+        // Boost strength based on order blocks support
+        const supportBlocks = orderBlocks.filter(ob => ob.type === 'support' && Math.abs(ob.level - closes[closes.length - 1]) < atr * 2);
+        strength += supportBlocks.length * 5;
+      }
+      // Sell signal conditions with tolerance
+      else if (rsi > (settings.triggerHigh || 70) - (settings.tolerance || 2) && 
+               smoothedRSI > (settings.triggerHigh || 70) && 
+               qqe > (settings.triggerHigh || 70) && 
+               adx > (settings.adxThreshold || 25)) {
+        signalType = "SELL";
+        strength = Math.min(95, 60 + (rsi - (settings.triggerHigh || 70)) * 2 + (adx - (settings.adxThreshold || 25)));
+        
+        // Boost strength based on order blocks resistance
+        const resistanceBlocks = orderBlocks.filter(ob => ob.type === 'resistance' && Math.abs(ob.level - closes[closes.length - 1]) < atr * 2);
+        strength += resistanceBlocks.length * 5;
+      }
+    }
   }
 
   const calculationTime = Date.now() - startTime;
@@ -110,18 +151,93 @@ function generateTradingSignal(marketData: any[], settings: any) {
     calculationTime,
     totalCalculations,
     cacheHitRate,
-    memoryUsage: process.memoryUsage().heapUsed / 1024 / 1024, // MB
-    cpuUsage: process.cpuUsage().user / 1000, // percentage approximation
-    networkLoad: Math.random() * 10, // simulated network load
+    memoryUsage: process.memoryUsage().heapUsed / 1024 / 1024,
+    cpuUsage: process.cpuUsage().user / 1000,
+    networkLoad: Math.random() * 10,
   });
 
   return {
     signalType,
     strength,
-    indicators: { rsi, qqe, adx },
+    indicators: { 
+      rsi, 
+      smoothedRSI, 
+      qqe, 
+      adx, 
+      atr,
+      isRangeMarket,
+      orderBlocks: orderBlocks.length,
+      fairValueGaps: fairValueGaps.length
+    },
     calculationTime,
     cacheHitRate
   };
+}
+
+function calculateSmoothedRSI(prices: number[], period: number = 14, smoothing: number = 5): number {
+  if (prices.length < period + smoothing) return 50;
+  
+  const rsiValues: number[] = [];
+  for (let i = smoothing; i < prices.length; i++) {
+    const slice = prices.slice(i - period - smoothing, i);
+    if (slice.length >= period + 1) {
+      rsiValues.push(calculateRSI(slice, period));
+    }
+  }
+  
+  if (rsiValues.length === 0) return 50;
+  
+  // Exponential smoothing
+  let smoothedRSI = rsiValues[0];
+  const alpha = 2 / (smoothing + 1);
+  
+  for (let i = 1; i < rsiValues.length; i++) {
+    smoothedRSI = alpha * rsiValues[i] + (1 - alpha) * smoothedRSI;
+  }
+  
+  return smoothedRSI;
+}
+
+function calculateAdvancedQQE(prices: number[], atrValues: number[], fastFactor: number = 4.238, smoothing: number = 5): number {
+  if (prices.length < smoothing || atrValues.length === 0) return 50;
+  
+  // Calculate smoothed RSI
+  const smoothedRSI = calculateSmoothedRSI(prices, 14, smoothing);
+  
+  // Get latest ATR
+  const atr = atrValues[atrValues.length - 1] || 0.001;
+  
+  // Calculate QQE using ATR-based delta
+  const qqeDelta = atr * fastFactor;
+  const qqeValue = smoothedRSI + (Math.sin(smoothedRSI * Math.PI / 180) * qqeDelta * 10);
+  
+  return Math.max(0, Math.min(100, qqeValue));
+}
+
+function calculateATRArray(highs: number[], lows: number[], closes: number[], period: number): number[] {
+  const atrValues: number[] = [];
+  
+  for (let i = period; i < highs.length; i++) {
+    let trSum = 0;
+    
+    for (let j = 0; j < period; j++) {
+      const idx = i - j;
+      const prevIdx = idx - 1;
+      
+      if (prevIdx >= 0) {
+        const tr = Math.max(
+          highs[idx] - lows[idx],
+          Math.abs(highs[idx] - closes[prevIdx]),
+          Math.abs(lows[idx] - closes[prevIdx])
+        );
+        trSum += tr;
+      }
+    }
+    
+    atrValues.push(trSum / period);
+  }
+  
+  return atrValues;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
