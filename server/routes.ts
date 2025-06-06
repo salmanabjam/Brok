@@ -174,17 +174,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/indicator-settings/:userId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
+      console.log(`Fetching indicator settings for user: ${userId}`);
+      
       const settings = await storage.getIndicatorSettings(userId);
       
       if (!settings) {
+        console.log(`No settings found for user ${userId}, creating defaults`);
         // Return default settings
         const defaultSettings = await storage.updateIndicatorSettings(userId, {});
         res.json(defaultSettings);
       } else {
+        console.log(`Found settings for user ${userId}:`, settings);
         res.json(settings);
       }
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch indicator settings" });
+      console.error("Error in indicator settings endpoint:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch indicator settings", 
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
