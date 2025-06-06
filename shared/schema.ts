@@ -77,15 +77,38 @@ export const indicatorSettings = pgTable("indicator_settings", {
   // Display Settings
   showSummaryTable: boolean("show_summary_table").default(true),
   showTimeZones: boolean("show_time_zones").default(true),
-  signalStyle: text("signal_style").default("Simple"),
+  signalStyle: text("signal_style").default("dots"),
   tablePosition: text("table_position").default("Top-Right"),
   signalLineLength: integer("signal_line_length").default(3),
   signalSize: text("signal_size").default("Normal"),
+  
+  // Signal Colors & Appearance
   buySignalOpacity: integer("buy_signal_opacity").default(70),
   sellSignalOpacity: integer("sell_signal_opacity").default(70),
   qqeSignalOpacity: integer("qqe_signal_opacity").default(50),
+  buySignalColor: text("buy_signal_color").default("#00ff00"),
+  sellSignalColor: text("sell_signal_color").default("#ff0000"),
+  neutralSignalColor: text("neutral_signal_color").default("#ffff00"),
+  signalIconSize: integer("signal_icon_size").default(8),
+  
+  // Background & UI Customization
+  backgroundColor: text("background_color").default("#1a1a1a"),
+  textColor: text("text_color").default("#ffffff"),
+  fontSize: integer("font_size").default(12),
+  fontFamily: text("font_family").default("Arial"),
+  
+  // Signal Strength Display
+  showSignalStrength: boolean("show_signal_strength").default(true),
+  strengthDisplayType: text("strength_display_type").default("gradient"),
+  strongSignalThreshold: real("strong_signal_threshold").default(75),
+  
+  // Trend Dots
   showTrendDots: boolean("show_trend_dots").default(true),
   trendDotsOpacity: integer("trend_dots_opacity").default(30),
+  
+  // Crypto Settings
+  cryptoSymbol: text("crypto_symbol").default("ADAUSD"),
+  enableCryptoNews: boolean("enable_crypto_news").default(true),
   
   // Auto-Adjustment
   autoAdjust: boolean("auto_adjust").default(true),

@@ -1,0 +1,70 @@
+You are my ultra-intelligent collaborator and assistant, always thinking several steps ahead of me. If a stage of the project encounters an issue, you should bypass it and make a note to revisit it later. Perhaps by progressing through later stages, you will find a way to resolve that section. Always provide automated solutions for each stage of the project. From the beginning to the final delivery, all steps should proceed automatically, and you are responsible for predicting needs and addressing problems before they arise.
+
+In the first phase, we will focus solely on Cardano USD. The interface should be organized clearly, with precise signal display and better color coding for readability. The current signal display is not easily distinguishable and needs to be optimized. Please implement color improvements to make signals more intuitive. Additionally, add customizable settings for the interface in the settings section to allow adjustments according to user preferences.
+
+Key Tasks and Features:
+1. Interface Customization Settings
+Implement these customization options in the settings for the Graphical User Interface (GUI):
+
+Signal Clarity: Ensure that buy and sell signals are clearly visible, with color differentiation and appropriate icons. Use contrasting colors for buy and sell signals to distinguish them clearly.
+
+Signal Strength: Introduce a color gradient or percentage bar to represent signal strength (e.g., “Strong”, “Medium”, “Weak”), ensuring it is clear and easy to interpret.
+
+Background Color Customization: Allow users to modify the background color for better contrast with signals.
+
+Font Size and Style: Provide options for customizing font size and font style for signal text and table headers.
+
+Signal Icon Size: Add options for adjusting the size of the signal icons to make them more visible and easier to interpret.
+
+Display Placement: Enable the user to choose the location for displaying the summary table and signals (e.g., top-left, top-right, bottom-left, bottom-right).
+
+2. Real-time Data Retrieval
+To receive live data and fundamental news for Cardano USD, integrate the following APIs and links:
+
+Fundamental News: Use the provided links to fetch live news updates related to Cardano USD, which can impact decision-making.
+
+News from TradingView:
+
+Link 1
+
+Link 2
+
+Link 3
+
+Link 4
+
+Price Data: For real-time prices of Cardano USD, use the following API links. You will need to add API keys or any required code for integration where needed:
+
+CoinGecko API
+
+Binance API
+
+Kraken API
+
+Yahoo Finance API
+
+Alpha Vantage API
+
+FTX API
+
+Bittrex API
+
+CryptoCompare API
+
+3. Key Functional Requirements
+Signal Display: The buy/sell signals need to be clearly visible, with color-based distinction. Consider using green for buy signals and red for sell signals, and introduce a neutral color for weak signals (e.g., yellow).
+
+Signal Strength: Visual indicators for signal strength should be included. The strength should be reflected using a gradient or bar system, with values such as Strong, Medium, and Weak.
+
+Background Color Options: The user should be able to change the background color of the indicator display to enhance clarity. A darker background with lighter signal colors could improve readability.
+
+Table Placement: Allow the user to choose where the summary table appears on the chart. The table should display key metrics like signal strength, trend direction, and market status (range or trend).
+
+4. Next Steps
+Integrate API calls for real-time price data and news feeds to keep the system updated with the latest information.
+
+Improve the signal display by implementing the customization options mentioned above.
+
+Test the interface with various display settings to ensure it meets the user’s needs.
+
+This report outlines the necessary modifications and functionality for the BrainIXMagT indicator. The main focus in the first phase is on improving signal clarity, background color customization, and ensuring real-time data retrieval for Cardano USD using the provided APIs and news sources.
