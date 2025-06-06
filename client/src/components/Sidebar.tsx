@@ -28,14 +28,14 @@ export default function Sidebar() {
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => (
           <Link key={item.path} href={item.path}>
-            <a className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+            <div className={`flex items-center space-x-3 p-3 rounded-lg transition-colors cursor-pointer ${
               location === item.path
                 ? "bg-primary/20 text-white"
                 : "hover:bg-gray-700 text-gray-300 hover:text-white"
             }`}>
               <i className={`${item.icon} w-5`}></i>
               <span>{item.label}</span>
-            </a>
+            </div>
           </Link>
         ))}
       </nav>

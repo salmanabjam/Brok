@@ -113,7 +113,12 @@ export class MemStorage implements IStorage {
 
   async insertTradingSignal(signal: InsertTradingSignal): Promise<TradingSignal> {
     const id = this.currentId++;
-    const tradingSignal: TradingSignal = { ...signal, id };
+    const tradingSignal: TradingSignal = { 
+      ...signal, 
+      id,
+      indicators: signal.indicators || null,
+      confirmed: signal.confirmed || false
+    };
     
     if (!this.tradingSignalsStore.has(signal.symbol)) {
       this.tradingSignalsStore.set(signal.symbol, []);
