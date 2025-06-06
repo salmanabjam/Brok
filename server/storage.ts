@@ -15,6 +15,8 @@ import {
   type PerformanceMetrics,
   type InsertPerformanceMetrics,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -41,151 +43,150 @@ export interface IStorage {
   getLatestPerformanceMetrics(limit?: number): Promise<PerformanceMetrics[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private marketDataStore: Map<string, MarketData[]>;
-  private tradingSignalsStore: Map<string, TradingSignal[]>;
-  private indicatorSettingsStore: Map<number, IndicatorSettings>;
-  private performanceMetricsStore: PerformanceMetrics[];
-  private currentId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.marketDataStore = new Map();
-    this.tradingSignalsStore = new Map();
-    this.indicatorSettingsStore = new Map();
-    this.performanceMetricsStore = [];
-    this.currentId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   async getLatestMarketData(symbol: string, limit = 100): Promise<MarketData[]> {
-    const data = this.marketDataStore.get(symbol) || [];
-    return data.slice(-limit);
+    const data = await db
+      .select()
+      .from(marketData)
+      .where(eq(marketData.symbol, symbol))
+      .orderBy(desc(marketData.timestamp))
+      .limit(limit);
+    return data.reverse(); // Return in chronological order
   }
 
   async insertMarketData(data: InsertMarketData): Promise<MarketData> {
-    const id = this.currentId++;
-    const marketDataEntry: MarketData = { ...data, id };
-    
-    if (!this.marketDataStore.has(data.symbol)) {
-      this.marketDataStore.set(data.symbol, []);
-    }
-    
-    const symbolData = this.marketDataStore.get(data.symbol)!;
-    symbolData.push(marketDataEntry);
-    
-    // Keep only last 1000 entries per symbol
-    if (symbolData.length > 1000) {
-      symbolData.splice(0, symbolData.length - 1000);
-    }
-    
-    return marketDataEntry;
+    const [inserted] = await db
+      .insert(marketData)
+      .values(data)
+      .returning();
+    return inserted;
   }
 
   async getMarketDataInRange(symbol: string, startTime: Date, endTime: Date): Promise<MarketData[]> {
-    const data = this.marketDataStore.get(symbol) || [];
-    return data.filter(
-      (entry) => entry.timestamp >= startTime && entry.timestamp <= endTime
-    );
+    const data = await db
+      .select()
+      .from(marketData)
+      .where(
+        and(
+          eq(marketData.symbol, symbol),
+          gte(marketData.timestamp, startTime),
+          lte(marketData.timestamp, endTime)
+        )
+      )
+      .orderBy(marketData.timestamp);
+    return data;
   }
 
   async getRecentSignals(symbol: string, limit = 50): Promise<TradingSignal[]> {
-    const signals = this.tradingSignalsStore.get(symbol) || [];
-    return signals.slice(-limit);
+    const signals = await db
+      .select()
+      .from(tradingSignals)
+      .where(eq(tradingSignals.symbol, symbol))
+      .orderBy(desc(tradingSignals.timestamp))
+      .limit(limit);
+    return signals.reverse(); // Return in chronological order
   }
 
   async insertTradingSignal(signal: InsertTradingSignal): Promise<TradingSignal> {
-    const id = this.currentId++;
-    const tradingSignal: TradingSignal = { 
-      ...signal, 
-      id,
-      indicators: signal.indicators || null,
-      confirmed: signal.confirmed || false
-    };
-    
-    if (!this.tradingSignalsStore.has(signal.symbol)) {
-      this.tradingSignalsStore.set(signal.symbol, []);
-    }
-    
-    const symbolSignals = this.tradingSignalsStore.get(signal.symbol)!;
-    symbolSignals.push(tradingSignal);
-    
-    // Keep only last 500 signals per symbol
-    if (symbolSignals.length > 500) {
-      symbolSignals.splice(0, symbolSignals.length - 500);
-    }
-    
-    return tradingSignal;
+    const [inserted] = await db
+      .insert(tradingSignals)
+      .values(signal)
+      .returning();
+    return inserted;
   }
 
   async getSignalsByTimeRange(symbol: string, startTime: Date, endTime: Date): Promise<TradingSignal[]> {
-    const signals = this.tradingSignalsStore.get(symbol) || [];
-    return signals.filter(
-      (signal) => signal.timestamp >= startTime && signal.timestamp <= endTime
-    );
+    const signals = await db
+      .select()
+      .from(tradingSignals)
+      .where(
+        and(
+          eq(tradingSignals.symbol, symbol),
+          gte(tradingSignals.timestamp, startTime),
+          lte(tradingSignals.timestamp, endTime)
+        )
+      )
+      .orderBy(tradingSignals.timestamp);
+    return signals;
   }
 
   async getIndicatorSettings(userId: number): Promise<IndicatorSettings | undefined> {
-    return this.indicatorSettingsStore.get(userId);
+    const [settings] = await db
+      .select()
+      .from(indicatorSettings)
+      .where(eq(indicatorSettings.userId, userId));
+    return settings || undefined;
   }
 
   async updateIndicatorSettings(userId: number, settings: Partial<InsertIndicatorSettings>): Promise<IndicatorSettings> {
-    const existing = this.indicatorSettingsStore.get(userId);
-    const id = existing?.id || this.currentId++;
+    // Check if settings exist
+    const existing = await this.getIndicatorSettings(userId);
     
-    const updatedSettings: IndicatorSettings = {
-      id,
-      userId,
-      rsiPeriod: 14,
-      qqeSmoothing: 5,
-      adxThreshold: 25,
-      rangeFilterEnabled: true,
-      atrPeriod: 14,
-      signalStyle: "dots",
-      opacity: 85,
-      trendDotsEnabled: true,
-      ...existing,
-      ...settings,
-    };
-    
-    this.indicatorSettingsStore.set(userId, updatedSettings);
-    return updatedSettings;
+    if (existing) {
+      // Update existing settings
+      const [updated] = await db
+        .update(indicatorSettings)
+        .set(settings)
+        .where(eq(indicatorSettings.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      // Create new settings with defaults
+      const defaultSettings = {
+        userId,
+        rsiPeriod: 14,
+        qqeSmoothing: 5,
+        adxThreshold: 25,
+        rangeFilterEnabled: true,
+        atrPeriod: 14,
+        signalStyle: "dots",
+        opacity: 85,
+        trendDotsEnabled: true,
+        ...settings,
+      };
+      
+      const [created] = await db
+        .insert(indicatorSettings)
+        .values(defaultSettings)
+        .returning();
+      return created;
+    }
   }
 
   async insertPerformanceMetrics(metrics: InsertPerformanceMetrics): Promise<PerformanceMetrics> {
-    const id = this.currentId++;
-    const performanceMetric: PerformanceMetrics = { ...metrics, id };
-    
-    this.performanceMetricsStore.push(performanceMetric);
-    
-    // Keep only last 1000 metrics
-    if (this.performanceMetricsStore.length > 1000) {
-      this.performanceMetricsStore.splice(0, this.performanceMetricsStore.length - 1000);
-    }
-    
-    return performanceMetric;
+    const [inserted] = await db
+      .insert(performanceMetrics)
+      .values(metrics)
+      .returning();
+    return inserted;
   }
 
   async getLatestPerformanceMetrics(limit = 10): Promise<PerformanceMetrics[]> {
-    return this.performanceMetricsStore.slice(-limit);
+    const metrics = await db
+      .select()
+      .from(performanceMetrics)
+      .orderBy(desc(performanceMetrics.timestamp))
+      .limit(limit);
+    return metrics.reverse(); // Return in chronological order
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
