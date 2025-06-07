@@ -1,6 +1,13 @@
-node_modules
-dist
-.DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build Folders
+[Bb]in/
+[Oo]bj/
+
+# VS Code
+.vscode/
