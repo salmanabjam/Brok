@@ -1,3 +1,4 @@
+# File: push_to_github.py
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -17,9 +18,13 @@ import time
 # Direct configuration (hardcoded values)
 PROJECT_DIR = r"C:\Ai\Projects\BRAINixIDEX\BRAINix TradeX 2\BRAINix TradeX 2"
 GITHUB_USERNAME = "salmanabjam"
-GITHUB_TOKEN = "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"
-REPO_NAME = "hispax"
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # پیشنهاد می‌شود از متغیر محیطی استفاده کنید
+REPO_NAME = "Brok"
 BRANCH = "main"
+
+# Allow override in Replit or env
+PROJECT_DIR = os.getenv("PROJECT_DIR", PROJECT_DIR)
+os.chdir(PROJECT_DIR)
 
 class Colors:
     """Console colors for better output"""
@@ -34,372 +39,131 @@ class Colors:
 
 def print_status(message, status="info"):
     """Print message with appropriate color"""
-    colors = {
-        "success": f"{Colors.GREEN}✅",
-        "error": f"{Colors.RED}❌", 
-        "warning": f"{Colors.YELLOW}⚠️",
-        "info": f"{Colors.BLUE}ℹ️",
-        "progress": f"{Colors.PURPLE}🔄"
+    icons = {
+        "success": "✅",
+        "error": "❌",
+        "warning": "⚠️",
+        "info": "ℹ️",
+        "progress": "🔄"
     }
-    color = colors.get(status, "ℹ️")
-    print(f"{color} {message}{Colors.END}")
+    icon = icons.get(status, icons["info"])
+    color = getattr(Colors, status.upper(), Colors.BLUE)
+    print(f"{color}{icon} {message}{Colors.END}")
 
 def validate_environment():
-    """Validate environment variables"""
+    """Validate environment variables and project dir"""
     print_status("Checking environment variables...", "progress")
-    
-    required_vars = {
-        "PROJECT_DIR": PROJECT_DIR,
-        "GITHUB_USERNAME": GITHUB_USERNAME, 
-        "GITHUB_TOKEN": GITHUB_TOKEN,
-        "REPO_NAME": REPO_NAME
-    }
-    
-    missing_vars = [var for var, value in required_vars.items() if not value]
-    
-    if missing_vars:
-        print_status(f"Missing environment variables: {', '.join(missing_vars)}", "error")
-        print_status("Please check your .env file", "error")
+    missing = []
+    for var in ["PROJECT_DIR", "GITHUB_USERNAME", "GITHUB_TOKEN", "REPO_NAME"]:
+        if not globals().get(var):
+            missing.append(var)
+    if missing:
+        print_status(f"Missing configuration: {', '.join(missing)}", "error")
         return False
-    
+
     if not os.path.isdir(PROJECT_DIR):
         print_status(f"Project directory not found: {PROJECT_DIR}", "error")
         return False
-        
+
     print_status("All environment variables are valid", "success")
     return True
 
 def test_github_connectivity():
-    """Test GitHub connection and access"""
+    """Test GitHub connection and repo access"""
     print_status("Testing GitHub connectivity...", "progress")
-    
-    try:
-        # Test general access
-        response = requests.get("https://api.github.com/user", 
-                              headers={"Authorization": f"token {GITHUB_TOKEN}"},
-                              timeout=10)
-        
-        if response.status_code == 401:
-            print_status("GitHub token is invalid", "error")
-            return False
-        elif response.status_code != 200:
-            print_status(f"GitHub connection error: {response.status_code}", "error")
-            return False
-            
-        user_info = response.json()
-        print_status(f"Successfully connected to GitHub - User: {user_info.get('login')}", "success")
-        
-        # Test repository access
-        repo_url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{REPO_NAME}"
-        repo_response = requests.get(repo_url, 
-                                   headers={"Authorization": f"token {GITHUB_TOKEN}"},
-                                   timeout=10)
-        
-        if repo_response.status_code == 404:
-            print_status(f"Repository {REPO_NAME} not found - Has it been created?", "warning")
-            return create_repository()
-        elif repo_response.status_code != 200:
-            print_status(f"Repository access error: {repo_response.status_code}", "error")
-            return False
-            
-        print_status(f"Repository {REPO_NAME} access confirmed", "success")
-        return True
-        
-    except requests.exceptions.RequestException as e:
-        print_status(f"Internet connection error: {e}", "error")
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    # 1) Test user access
+    resp = requests.get("https://api.github.com/user", headers=headers, timeout=10)
+    if resp.status_code == 401:
+        print_status("GitHub token is invalid (401)", "error")
+        return False
+    if resp.status_code != 200:
+        print_status(f"GitHub API error: {resp.status_code}", "error")
+        return False
+    user = resp.json().get("login")
+    print_status(f"Connected as GitHub user: {user}", "success")
+
+    # 2) Test repo access
+    repo_api = f"https://api.github.com/repos/{GITHUB_USERNAME}/{REPO_NAME}"
+    resp2 = requests.get(repo_api, headers=headers, timeout=10)
+    if resp2.status_code == 404:
+        print_status(f"Repository {REPO_NAME} not found (404)", "warning")
+        return False
+    if resp2.status_code != 200:
+        print_status(f"Repository access error: {resp2.status_code}", "error")
         return False
 
-def create_repository():
-    """Create repository if it doesn't exist"""
-    print_status(f"Do you want to create repository {REPO_NAME}? (y/n): ", "info")
-    
-    choice = input().lower().strip()
-    if choice not in ['y', 'yes']:
-        print_status("Operation cancelled", "warning")
-        return False
-    
-    print_status(f"Creating repository {REPO_NAME}...", "progress")
-    
-    try:
-        create_data = {
-            "name": REPO_NAME,
-            "description": "BRAINix TradeX 2 - Automated Trading System",
-            "private": False,
-            "auto_init": False
-        }
-        
-        response = requests.post("https://api.github.com/user/repos",
-                               headers={"Authorization": f"token {GITHUB_TOKEN}"},
-                               json=create_data,
-                               timeout=15)
-        
-        if response.status_code == 201:
-            print_status(f"Repository {REPO_NAME} created successfully", "success")
-            return True
-        elif response.status_code == 403:
-            print_status("❌ Access Error: Your GitHub token doesn't have permission to create repositories", "error")
-            print_status("🔧 Solution:", "info")
-            print("   1. Go to GitHub Settings → Developer settings → Personal access tokens")
-            print("   2. Enable 'repo' scope for your token")
-            print("   3. Or manually create the repository on GitHub")
-            print(f"   4. URL: https://github.com/new")
-            print_status("Have you manually created the repository and want to continue? (y/n): ", "info")
-            manual_choice = input().lower().strip()
-            return manual_choice in ['y', 'yes']
-        else:
-            print_status(f"Repository creation error: {response.status_code} - {response.text}", "error")
-            return False
-            
-    except requests.exceptions.RequestException as e:
-        print_status(f"Repository creation error: {e}", "error")
-        return False
+    print_status(f"Repository {REPO_NAME} access confirmed", "success")
+    return True
 
-def run_command(cmd, cwd=None):
-    """Execute command with better output"""
+def run_cmd(cmd, cwd=None):
+    """Run shell command and print its output"""
     try:
         print_status(f"Executing: {cmd}", "progress")
-        result = subprocess.run(cmd, shell=True, check=True, cwd=cwd or PROJECT_DIR,
-                              capture_output=True, text=True, encoding='utf-8')
-        if result.stdout.strip():
-            print(f"   📝 {result.stdout.strip()}")
-        return True, result.stdout
-    except subprocess.CalledProcessError as e:
-        error_msg = e.stderr.strip() if e.stderr else str(e)
-        print_status(f"Command execution error: {cmd}", "error")
-        print_status(f"Error details: {error_msg}", "error")
-        return False, error_msg
-
-def git_command(cmd):
-    """Execute git command"""
-    return run_command(f'git {cmd}', PROJECT_DIR)
-
-def create_comprehensive_gitignore():
-    """Create comprehensive .gitignore"""
-    gitignore_path = os.path.join(PROJECT_DIR, ".gitignore")
-    
-    gitignore_content = """# System files and folders
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Visual Studio / Visual Studio Code
-.vs/
-.vscode/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-*.vcxproj.filters
-*.vcxproj.user
-
-# Build and output folders
-[Bb]in/
-[Oo]bj/
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-build/
-dist/
-out/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-*.egg-info/
-.pytest_cache/
-
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Sensitive files
-.env
-.env.local
-.env.production
-*.key
-*.pem
-config/secrets.*
-secrets/
-
-# Temporary files
-*.tmp
-*.temp
-*.log
-*.bak
-*.swp
-*.swo
-*~
-
-# IDE
-*.iml
-.idea/
-*.ipr
-*.iws
-
-# OS generated files
-.DS_Store?
-ehthumbs.db
-Icon?
-
-# Project specific files
-New Text Document.txt
-"""
-
-    try:
-        with open(gitignore_path, "w", encoding="utf-8") as f:
-            f.write(gitignore_content)
-        print_status("Comprehensive .gitignore created", "success")
+        res = subprocess.run(
+            cmd, shell=True, cwd=cwd or PROJECT_DIR,
+            capture_output=True, text=True, check=True
+        )
+        if res.stdout:
+            print(f"   📝 {res.stdout.strip()}")
         return True
-    except Exception as e:
-        print_status(f".gitignore creation error: {e}", "error")
+    except subprocess.CalledProcessError as e:
+        print_status(f"Error running `{cmd}`", "error")
+        print_status(e.stderr.strip() or str(e), "error")
         return False
 
-def check_git_status():
-    """Check git status"""
-    success, output = git_command("status --porcelain")
-    if not success:
-        return False, []
-    
-    changes = output.strip().split('\n') if output.strip() else []
-    return True, changes
-
-def initialize_git_repo():
-    """Initialize git repository"""
+def setup_git():
+    """Initialize git repo and branch if needed"""
     git_dir = os.path.join(PROJECT_DIR, ".git")
-    
     if not os.path.isdir(git_dir):
-        print_status("Initializing Git repository...", "progress")
-        success, _ = git_command("init")
-        if not success:
+        if not run_cmd("git init"):
             return False
-        
-        # Set main branch
-        success, _ = git_command(f"checkout -b {BRANCH}")
-        if not success:
-            print_status(f"Error creating branch {BRANCH}", "error")
+        if not run_cmd(f"git checkout -b {BRANCH}"):
             return False
-    
-    print_status("Git repository is ready", "success")
+    print_status("Git repository initialized", "success")
     return True
 
 def setup_remote():
-    """Setup remote origin"""
+    """Configure remote origin with token in URL"""
     print_status("Setting up remote origin...", "progress")
-    
-    # Create secure URL
-    encoded_token = quote(GITHUB_TOKEN)
-    remote_url = f"https://{GITHUB_USERNAME}:{encoded_token}@github.com/{GITHUB_USERNAME}/{REPO_NAME}.git"
-    
-    # Check existing remote
-    success, output = git_command("remote")
-    
-    if "origin" in output:
-        success, _ = git_command(f"remote set-url origin {remote_url}")
-        print_status("Remote origin updated", "success")
+    token_enc = quote(GITHUB_TOKEN)
+    url = f"https://{GITHUB_USERNAME}:{token_enc}@github.com/{GITHUB_USERNAME}/{REPO_NAME}.git"
+    # add or update origin
+    origin_list = subprocess.getoutput(f'cd "{PROJECT_DIR}" && git remote')
+    if "origin" in origin_list:
+        run_cmd(f'git remote set-url origin {url}')
+        print_status("Updated existing remote origin", "success")
     else:
-        success, _ = git_command(f"remote add origin {remote_url}")
-        print_status("Remote origin added", "success")
-    
-    return success
-
-def commit_and_push():
-    """Perform commit and push"""
-    # Check for changes
-    success, changes = check_git_status()
-    if not success:
-        return False
-    
-    if not changes:
-        print_status("No changes to commit", "info")
-        return True
-    
-    print_status(f"Number of changed files: {len(changes)}", "info")
-    
-    # Add files
-    print_status("Adding files to Git...", "progress")
-    success, _ = git_command("add .")
-    if not success:
-        return False
-    
-    # Commit
-    commit_message = f"Auto-commit: {len(changes)} files updated - {time.strftime('%Y-%m-%d %H:%M:%S')}"
-    print_status("Performing commit...", "progress")
-    success, _ = git_command(f'commit -m "{commit_message}"')
-    if not success:
-        return False
-    
-    # Push
-    print_status(f"Pushing to branch {BRANCH}...", "progress")
-    success, _ = git_command(f"push -u origin {BRANCH}")
-    if not success:
-        return False
-    
-    print_status("All files successfully transferred to GitHub! 🎉", "success")
+        run_cmd(f'git remote add origin {url}')
+        print_status("Added new remote origin", "success")
     return True
 
-def show_project_summary():
-    """Display project summary"""
-    print_status("Project Summary:", "info")
-    print(f"  📁 Project Path: {PROJECT_DIR}")
-    print(f"  👤 GitHub User: {GITHUB_USERNAME}")
-    print(f"  📦 Repository: {REPO_NAME}")
-    print(f"  🌿 Branch: {BRANCH}")
-    print(f"  🔗 URL: https://github.com/{GITHUB_USERNAME}/{REPO_NAME}")
+def commit_and_push():
+    """Stage, commit, and push all changes"""
+    if not run_cmd("git add ."):
+        return False
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    if not run_cmd(f'git commit -m "Auto-commit: updates at {timestamp}"'):
+        print_status("Nothing to commit (or commit failed)", "info")
+    if not run_cmd(f"git push -u origin {BRANCH}"):
+        return False
+    print_status("All changes pushed successfully! 🎉", "success")
+    return True
 
 def main():
-    """Main function"""
-    print(f"{Colors.BOLD}{Colors.CYAN}")
-    print("=" * 60)
-    print("    🚀 GitHub Migration Script - BRAINix TradeX 2")
-    print("=" * 60)
-    print(Colors.END)
-    
-    # Step 1: Configuration validation
-    if not validate_environment():
-        sys.exit(1)
-    
-    # Step 2: GitHub connectivity test
-    if not test_github_connectivity():
-        sys.exit(1)
-    
-    # Step 3: Git initialization
-    if not initialize_git_repo():
-        sys.exit(1)
-    
-    # Step 4: Create .gitignore
-    if not create_comprehensive_gitignore():
-        print_status("Continuing without .gitignore...", "warning")
-    
-    # Step 5: Setup remote
-    if not setup_remote():
-        sys.exit(1)
-    
-    # Step 6: Commit and push
-    if not commit_and_push():
-        sys.exit(1)
-    
-    # Display final summary
-    print("\n" + "=" * 60)
-    print_status("GitHub migration completed successfully! 🎊", "success")
-    show_project_summary()
-    print("=" * 60)
+    print(f"{Colors.CYAN}{Colors.BOLD}\n🚀 GitHub Migration Script\n{Colors.END}")
+    if not validate_environment(): sys.exit(1)
+    if not test_github_connectivity(): sys.exit(1)
+    if not setup_git(): sys.exit(1)
+    if not setup_remote(): sys.exit(1)
+    if not commit_and_push(): sys.exit(1)
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print_status("\nOperation cancelled by user", "warning")
+        print_status("Operation cancelled by user", "warning")
         sys.exit(0)
     except Exception as e:
         print_status(f"Unexpected error: {e}", "error")

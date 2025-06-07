@@ -1,5 +1,6 @@
+// File: package.json
 {
-  "name": "rest-express",
+  "name": "Brok",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
