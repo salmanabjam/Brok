@@ -1,0 +1,9 @@
+{
+  "last_updated": "2025-06-07T12:00:00Z",
+  "completed_tasks": [],
+  "pending_tasks": [
+    "Setup project skeleton",
+    "Create docs/requirements.md",
+    "Create .ai_progress.json"
+  ]
+}
